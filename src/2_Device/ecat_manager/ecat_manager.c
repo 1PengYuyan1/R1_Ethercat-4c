@@ -2,6 +2,20 @@
 #include <stdio.h>
 #include "soem/soem.h"
 
+static void ecat_dump_slave_states(ecat_master_t *master)
+{
+    ecx_readstate(&master->ctx);
+    for (int i = 1; i <= master->ctx.slavecount; i++)
+    {
+        uint16_t al = master->ctx.slavelist[i].ALstatuscode;
+        printf("[ECAT] Slave %d state=0x%02x AL=0x%04X (%s)\n",
+               i,
+               master->ctx.slavelist[i].state,
+               al,
+               ec_ALstatuscode2string(al));
+    }
+}
+
 // 初始化网卡并扫描从站
 bool ecat_master_init(ecat_master_t *master, const char *ifname)
 {
@@ -40,7 +54,12 @@ bool ecat_master_init(ecat_master_t *master, const char *ifname)
     // printf("[ECAT] DC and Sync0 configured for %d slaves.\n", master->ctx.slavecount);
 
     // 检查从站状态
-    ecx_statecheck(&master->ctx, 0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 2);
+    int state = ecx_statecheck(&master->ctx, 0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 2);
+    if (state != EC_STATE_SAFE_OP)
+    {
+        printf("[WARN] Not all slaves reached SAFE_OP (state=0x%x)\n", state);
+        ecat_dump_slave_states(master);
+    }
 
     master->slave_count = master->ctx.slavecount;
     master->is_running = true;
@@ -59,12 +78,23 @@ void ecat_master_sync(ecat_master_t *master)
 bool ecat_master_bring_online(ecat_master_t *master)
 {
     printf("[ECAT] Requesting OP state for all slaves...\n");
+
+    // 按 SOEM 推荐流程：先交换若干帧过程数据，避免 SAFE_OP->OP 时输出无效导致拒绝切换
+    for (int i = 0; i < 5; i++)
+    {
+        ecx_send_processdata(&master->ctx);
+        ecx_receive_processdata(&master->ctx, EC_TIMEOUTRET);
+        osal_usleep(1000);
+    }
+
     master->ctx.slavelist[0].state = EC_STATE_OPERATIONAL;
     ecx_writestate(&master->ctx, 0);
 
     int chk = 40;
     do
     {
+        ecx_send_processdata(&master->ctx);
+        ecx_receive_processdata(&master->ctx, EC_TIMEOUTRET);
         osal_usleep(10000);
         ecx_statecheck(&master->ctx, 0, EC_STATE_OPERATIONAL, 50000);
     } while (chk-- && (master->ctx.slavelist[0].state != EC_STATE_OPERATIONAL));
@@ -77,11 +107,7 @@ bool ecat_master_bring_online(ecat_master_t *master)
     else
     {
         printf("[ERROR] Failed to reach OP state. Current state: 0x%x\n", master->ctx.slavelist[0].state);
-        if (master->ctx.slavelist[0].state != EC_STATE_OPERATIONAL)
-        {
-            uint16_t al_status_code = ecx_readeeprom(&master->ctx, 1, 0x134, EC_TIMEOUTRET);   // 或者使用专门的AL读取函数
-            printf("[ERROR] AL Status Code: 0x%04X\n", al_status_code); // SOEM 通常存在 slavelist 里
-        }
+        ecat_dump_slave_states(master);
 
         return false;
     }

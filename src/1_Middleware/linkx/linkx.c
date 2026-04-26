@@ -12,6 +12,7 @@ void linkx_init(linkx_t *linkx, uint32_t slave_id, struct ecx_context *master)
     linkx->slave_id = slave_id;
     linkx->master = master;
     linkx->slave = &master->slavelist[slave_id];
+    memset(linkx->can_stats, 0, sizeof(linkx->can_stats));
 }
 
 // 封装状态切换逻辑，屏蔽 EtherCAT 状态机细节
@@ -113,7 +114,8 @@ bool linkx_switch_can_channel(linkx_t *linkx, uint8_t channel, bool enable)
 {
     if (channel >= LINKX_CAN_CHANNEL_NUM)
         return false;
-    ecx_SDOwrite(linkx->master, linkx->slave_id, 0x8001, channel + 1, false, 1, &enable, 300);
+    int wkc = ecx_SDOwrite(linkx->master, linkx->slave_id, 0x8001, channel + 1, false, 1, &enable, 300);
+    return (wkc > 0);
 }
 
 // 从 EtherCAT 从站输入缓冲区读取接收 PDO 数据，更新 linkx->tx_pdos 供外部读取
@@ -151,6 +153,8 @@ bool linkx_send_can(linkx_t *linkx, uint8_t channel, uint32_t canid, bool canfd,
     linkx->rx_pdos[channel].params.rtr = rtr;
     linkx->rx_pdos[channel].params.dlen = dlen;
     memcpy(linkx->rx_pdos[channel].data_u32, data, dlen);
+    linkx->can_stats[channel].tx_frames++;
+    linkx->can_stats[channel].tx_bytes += dlen;
     return true;
 }
 

@@ -15,7 +15,9 @@
 #include <cmath>
 #include "linkx4c_handler.h"
 
+#ifndef PI
 #define PI 3.14159265358979323846f
+#endif
 
 // 布瑞特编码器默认参数
 #define BRT_ENCODER_DEFAULT_BAUDRATE 1000000 // 1000kbps

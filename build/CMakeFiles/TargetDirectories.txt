@@ -1,0 +1,3 @@
+/home/pzx/code/R1/Ethercat_R1/SOEM_1/build/CMakeFiles/linkx_soem_demo.dir
+/home/pzx/code/R1/Ethercat_R1/SOEM_1/build/CMakeFiles/edit_cache.dir
+/home/pzx/code/R1/Ethercat_R1/SOEM_1/build/CMakeFiles/rebuild_cache.dir

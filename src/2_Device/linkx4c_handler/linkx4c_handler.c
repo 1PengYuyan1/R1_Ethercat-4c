@@ -19,11 +19,9 @@ bool linkx_hw_wakeup(linkx_t *linkx)
 
     for (int ch = 0; ch < 4; ch++)
     {
-        uint16_t target_index = 0x8000 + ch; // 正确的 Index
-        // 使能开关的 Sub-Index 固定是 0x01
-        int wkc = ecx_SDOwrite(linkx->master, linkx->slave_id, target_index, 0x01, FALSE, sizeof(enable), &enable, EC_TIMEOUTRXM);
-        if (wkc > 0) printf("[LinkX] CAN Channel %d: WAKEUP SUCCESS\n", ch);
-        else printf("[LinkX] CAN Channel %d: WAKEUP FAILED (WKC=%d)\n", ch, wkc);
+        bool ok = linkx_switch_can_channel(linkx, ch, enable != 0);
+        if (ok) printf("[LinkX] CAN Channel %d: WAKEUP SUCCESS\n", ch);
+        else printf("[LinkX] CAN Channel %d: WAKEUP FAILED\n", ch);
     }
     printf("[LinkX] All hardware initialization commands sent.\n");
     return true;
@@ -57,6 +55,8 @@ bool linkx_quick_recv(linkx_t *linkx, uint8_t ch, can_msg_t *out_msg)
         memcpy(out_msg->data, rx_pdo->data_u32, 8); // 数据拷贝
 
         last_timestamps[ch] = rx_pdo->timestamp; // 更新时间戳
+        linkx->can_stats[ch].rx_frames++;
+        linkx->can_stats[ch].rx_bytes += out_msg->dlen;
         return true;
     }
     return false;

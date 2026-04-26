@@ -62,12 +62,21 @@ typedef struct
 // LinkX 设备结构体
 typedef struct
 {
+    uint64_t tx_frames;
+    uint64_t tx_bytes;
+    uint64_t rx_frames;
+    uint64_t rx_bytes;
+} linkx_can_stats_t;
+
+typedef struct
+{
     uint32_t slave_id; // 从站 ID
 
     can_baudrate_setting_t channel_baudrates[LINKX_CAN_CHANNEL_NUM];
 
     can_tx_pdo_t tx_pdos[LINKX_CAN_CHANNEL_NUM]; // 发送 PDO 缓存
     can_rx_pdo_t rx_pdos[LINKX_CAN_CHANNEL_NUM]; // 接收 PDO 缓存
+    linkx_can_stats_t can_stats[LINKX_CAN_CHANNEL_NUM]; // CAN 收发统计
 
     struct ecx_context *master; // 主站上下文
     struct ec_slave *slave;     // 从站信息

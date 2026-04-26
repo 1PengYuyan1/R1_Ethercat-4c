@@ -3,7 +3,7 @@
 
 #include <cstdint>
 #include <algorithm>
-
+#include <cmath>
 
 #ifndef CELSIUS_TO_KELVIN
 #define CELSIUS_TO_KELVIN (273.15f)

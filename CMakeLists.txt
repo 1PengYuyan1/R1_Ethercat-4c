@@ -27,6 +27,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     inc/1_Middleware/linkx
     inc/1_Middleware/npcap
     inc/1_Middleware/math
+    inc/1_Middleware/Algorithm
 
     
     inc/2_Device/ecat_manager
